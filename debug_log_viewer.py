@@ -40,6 +40,14 @@ MAX_DISPLAY_CHARS = 500_000
 DEFAULT_EXCLUDE_SENDERS = ("download", "downloadovor", "downloadmanager")
 RECV_BUFFER_SIZE = 65536
 
+FLASH_POLICY_REQUEST = b"<policy-file-request/>"
+FLASH_POLICY_RESPONSE = (
+    b'<?xml version="1.0"?>'
+    b'<cross-domain-policy>'
+    b'<allow-access-from domain="*" to-ports="*"/>'
+    b"</cross-domain-policy>\x00"
+)
+
 
 def parse_args():
     p = argparse.ArgumentParser(description="Nanovor DebugLog Viewer")
@@ -168,6 +176,13 @@ class LogServer:
                     break
 
                 buffer += data
+
+                if FLASH_POLICY_REQUEST in buffer:
+                    end = buffer.find(b"\x00", buffer.find(FLASH_POLICY_REQUEST))
+
+                    if end != -1:
+                        conn.sendall(FLASH_POLICY_RESPONSE)
+                        buffer = buffer[end + 1 :].lstrip()
 
                 while b"\n" in buffer or b"\r" in buffer:
                     line, _, buffer = buffer.partition(b"\n")
